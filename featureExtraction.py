@@ -3,7 +3,7 @@ import librosa, os, csv
 # pip install librosa
 class Sample:
     def __init__(self, sampleFile, sampleLabel):
-        self.name = sampleLabel
+        self.name = str(sampleLabel)
         self.y, self.sr = librosa.load(sampleFile)
         self.chromaCens = librosa.feature.chroma_stft(y=self.y, sr=self.sr)
         self.melSpect = librosa.feature.melspectrogram(y=self.y, sr=self.sr)
@@ -16,6 +16,10 @@ class Sample:
         self.spectralRolloff = librosa.feature.spectral_rolloff(y=self.y, sr=self.sr)
         self.tonalCentroid = librosa.feature.tonnetz(y=self.y, sr=self.sr)
         self.zeroCrossingRate = librosa.feature.zero_crossing_rate(y=self.y)
+
+# this method is acting wacky and not returning a string so just use sample.name instead of sample.getID
+    def getID(self):
+        return self.name
 
     def getChromaCens(self):
         return self.chromaCens
@@ -171,46 +175,69 @@ def listValuesPretty(annoyingArray):
 # melspectrogram was returning like 20,000 data points
 def constructCsvRow(sample):
     row = []
-    row.append(listValuesPretty(sample.getChromaCens()))
-    #row.append(listValuesPretty(sample.getMelSpect()))
-    row.append(listValuesPretty(sample.getMfcc()))
-    row.append(listValuesPretty(sample.getRms()))
-    row.append(listValuesPretty(sample.getSpectralCentroid()))
-    row.append(listValuesPretty(sample.getSpectralBandwidth()))
-    row.append(listValuesPretty(sample.getSpectralContrast()))
-    row.append(listValuesPretty(sample.getSpectralFlatness()))
-    row.append(listValuesPretty(sample.getSpectralRolloff()))
-    row.append(listValuesPretty(sample.getTonalCentroid()))
-    row.append(listValuesPretty(sample.getZeroCrossingRate()))
+    for x in listValuesPretty(sample.getChromaCens()):
+        row.append(x)
+    #for x in listValuesPretty(sample.getMelSpect()):
+        #row.append(x)
+    for x in listValuesPretty(sample.getMfcc()):
+        row.append(x)
+    for x in listValuesPretty(sample.getRms()):
+        row.append(x)
+    for x in listValuesPretty(sample.getSpectralCentroid()):
+        row.append(x)
+    for x in listValuesPretty(sample.getSpectralBandwidth()):
+        row.append(x)
+    for x in listValuesPretty(sample.getSpectralContrast()):
+        row.append(x)
+    for x in listValuesPretty(sample.getSpectralFlatness()):
+        row.append(x)
+    for x in listValuesPretty(sample.getSpectralRolloff()):
+        row.append(x)
+    for x in listValuesPretty(sample.getTonalCentroid()):
+        row.append(x)
+    for x in listValuesPretty(sample.getZeroCrossingRate()):
+        row.append(x)
+    row.append(sample.name)
     return row
 
 def constructCsvHeader(sample):
     header = []
-    header.append(sample.getChromaCensLabels())
-    #header.append(sample.getMelSpectLabels())
-    header.append(sample.getMfccLabels())
-    header.append(sample.getRmsLabels())
-    header.append(sample.getSpecCLabels())
-    header.append(sample.getSpecBLabels())
-    header.append(sample.getSpecCoLabels())
-    header.append(sample.getSpecFlLabels())
-    header.append(sample.getSpecRoLabels())
-    header.append(sample.getTonalCentroidLabels())
-    header.append(sample.getZeroCrossLabels())
+    for x in sample.getChromaCensLabels():
+        header.append(x)
+    #for x in sample.getMelSpectLabels():
+        #header.append(x)
+    for x in sample.getMfccLabels():
+        header.append(x)
+    for x in sample.getRmsLabels():
+        header.append(x)
+    for x in sample.getSpecCLabels():
+        header.append(x)
+    for x in sample.getSpecBLabels():
+        header.append(x)
+    for x in sample.getSpecCoLabels():
+        header.append(x)
+    for x in sample.getSpecFlLabels():
+        header.append(x)
+    for x in sample.getSpecRoLabels():
+        header.append(x)
+    for x in sample.getTonalCentroidLabels():
+        header.append(x)
+    for x in sample.getZeroCrossLabels():
+        header.append(x)
+    header.append("SampleID")
     return header
 
 def writeAllToCsv(sampleFileFolderPath, sampleTypeID):
     fileNameList = os.listdir(sampleFileFolderPath)
     outputFilename = "featureData" + sampleTypeID + ".csv"
     dataOutput = open(outputFilename, "w+", encoding="utf8")
-    writer = csv.writer(dataOutput, delimiter='|')
+    writer = csv.writer(dataOutput, delimiter=',')
     headerSampleName = fileNameList[0]
     headerSample = Sample((sampleFileFolderPath + "\\" + headerSampleName), sampleTypeID)
     writer.writerow(constructCsvHeader(headerSample))
     for sampleFile in fileNameList:
         audioSample = Sample((sampleFileFolderPath + "\\" + sampleFile), sampleTypeID)
         row = constructCsvRow(audioSample)
-
         writer.writerow(row)
 
 
