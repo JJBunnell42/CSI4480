@@ -216,4 +216,4 @@ def writeAllToCsv(sampleFileFolderPath, sampleTypeID):
 
 # call this with the path to the trial recordings folder as the path
 
-writeAllToCsv("C:\\Users\\sydne\\Documents\\Recordings\\trial recordings", "test")
+writeAllToCsv("C:\\Users\\sydney\\Documents\\Recordings\\trial recordings", "test")
