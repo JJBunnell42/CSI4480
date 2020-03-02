@@ -225,6 +225,7 @@ def constructCsvHeader(sample):
     for x in sample.getZeroCrossLabels():
         header.append(x)
     header.append("SampleID")
+    header.append("FileNum")
     return header
 
 def writeAllToCsv(sampleFileFolderPath, sampleTypeID):
@@ -235,12 +236,16 @@ def writeAllToCsv(sampleFileFolderPath, sampleTypeID):
     headerSampleName = fileNameList[0]
     headerSample = Sample((sampleFileFolderPath + "\\" + headerSampleName), sampleTypeID)
     writer.writerow(constructCsvHeader(headerSample))
+    i = 1
     for sampleFile in fileNameList:
         audioSample = Sample((sampleFileFolderPath + "\\" + sampleFile), sampleTypeID)
         row = constructCsvRow(audioSample)
+        row.append(str(i))
+        print("Recording row number " + str(i))
         writer.writerow(row)
+        i +=1
 
 
 # call this with the path to the trial recordings folder as the path
-
-writeAllToCsv("C:\\Users\\sydney\\Documents\\Recordings\\trial recordings", "test")
+# "C:\\Users\\sydne\\Documents\\Recordings\\Replay-Recordings\\training\\2PR", "2PR"
+writeAllToCsv("C:\\Users\\sydne\\Documents\\Recordings\\trial recordings", "trial2")
