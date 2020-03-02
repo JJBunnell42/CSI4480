@@ -1,25 +1,25 @@
-import librosa, os, csv
+import librosa, os, csv, time
 
 # pip install librosa
+
+# sampleFile is path to file
+# sampleLabel is label for sample type to be placed in the last column of csv
 class Sample:
     def __init__(self, sampleFile, sampleLabel):
         self.name = str(sampleLabel)
         self.y, self.sr = librosa.load(sampleFile)
-        self.chromaCens = librosa.feature.chroma_stft(y=self.y, sr=self.sr)
-        self.melSpect = librosa.feature.melspectrogram(y=self.y, sr=self.sr)
-        self.mfcc = librosa.feature.mfcc(y=self.y, sr=self.sr)
+        self.chromaCens = librosa.feature.chroma_stft(y=self.y, sr=self.sr, n_chroma=4)
+        self.melSpect = librosa.feature.melspectrogram(y=self.y, sr=self.sr)                # probably not useful and returns 20,000 data points, excluded
+        self.mfcc = librosa.feature.mfcc(y=self.y, sr=14000, n_mfcc=4)                      # https://ieeexplore.ieee.org/document/647282
         self.rms = librosa.feature.rms(y=self.y)
         self.spectralCentroid = librosa.feature.spectral_centroid(y=self.y, sr=self.sr)
         self.spectralBandwidth = librosa.feature.spectral_bandwidth(y=self.y, sr=self.sr)
-        self.spectralContrast = librosa.feature.spectral_contrast(y=self.y, sr=self.sr)
+        self.spectralContrast = librosa.feature.spectral_contrast(y=self.y, sr=self.sr)     # leaving this at ~1500 vals since it will probably correlate to replays
         self.spectralFlatness = librosa.feature.spectral_flatness(y=self.y)
         self.spectralRolloff = librosa.feature.spectral_rolloff(y=self.y, sr=self.sr)
         self.tonalCentroid = librosa.feature.tonnetz(y=self.y, sr=self.sr)
         self.zeroCrossingRate = librosa.feature.zero_crossing_rate(y=self.y)
 
-# this method is acting wacky and not returning a string so just use sample.name instead of sample.getID
-    def getID(self):
-        return self.name
 
     def getChromaCens(self):
         return self.chromaCens
@@ -54,34 +54,31 @@ class Sample:
     def getZeroCrossingRate(self):
         return self.zeroCrossingRate
 
+
+# functions that generate labels for csv header
+# returns a list of strings
     def getChromaCensLabels(self):
-        i = 0
+        m = 0
+        n = 0
         chromaCensLabelsList = []
         for x in self.chromaCens:
             for y in x:
-                i += 1
-        for n in range(i):
-            chromaCensLabelsList.append("chromC" + str(n))
+                chromaCensLabelsList.append("chromC(" + str(m) + ":" + str(n) +")")
+                n += 1
+            m += 1
+            n = 0
         return chromaCensLabelsList
 
-    def getMelSpectLabels(self):
-        i = 0
-        melSpectLabelsList = []
-        for x in self.melSpect:
-            for y in x:
-                i += 1
-        for n in range(i):
-            melSpectLabelsList.append("melS" + str(n))
-        return melSpectLabelsList
-
     def getMfccLabels(self):
-        i = 0
+        m = 0
+        n = 0
         mfccLabelsList = []
         for x in self.mfcc:
             for y in x:
-                i += 1
-        for n in range(i):
-            mfccLabelsList.append("mfcc" + str(n))
+                mfccLabelsList.append("mfcc(" + str(m) + ":" + str(n) + ")")
+            n += 1
+        m += 1
+        n = 0
         return mfccLabelsList
 
     def getRmsLabels(self):
@@ -115,13 +112,15 @@ class Sample:
         return specBLabelsList
 
     def getSpecCoLabels(self):
-        i = 0
+        m = 0
+        n = 0
         specCoLabelsList = []
         for x in self.spectralContrast:
             for y in x:
-                i += 1
-        for n in range(i):
-            specCoLabelsList.append("specCo" + str(n))
+                specCoLabelsList.append("specCo(" + str(m) + ":" + str(n) + ")")
+                n += 1
+            m += 1
+            n = 0
         return specCoLabelsList
 
     def getSpecFlLabels(self):
@@ -145,13 +144,15 @@ class Sample:
         return specRoLabelsList
 
     def getTonalCentroidLabels(self):
-        i = 0
+        m = 0
+        n = 0
         tonCLabelsList = []
         for x in self.tonalCentroid:
             for y in x:
-                i += 1
-        for n in range(i):
-            tonCLabelsList.append("tonC" + str(n))
+                tonCLabelsList.append("tonC(" + str(m) + ":" + str(n) + ")")
+                n += 1
+            m += 1
+            n = 0
         return tonCLabelsList
 
     def getZeroCrossLabels(self):
@@ -165,6 +166,9 @@ class Sample:
         return zeroCrLabelsList
 
 
+# simple way to deal with arrays within arrays and create a master list of values
+# annoyingArray is a nested array returned by the get feature functions
+# returns a list of values
 def listValuesPretty(annoyingArray):
     valuesList = []
     for x in annoyingArray:
@@ -172,13 +176,12 @@ def listValuesPretty(annoyingArray):
             valuesList.append(y)
     return valuesList
 
-# melspectrogram was returning like 20,000 data points
+# creates row of values for csv
+# returns list of values from all features, last column is sample ID
 def constructCsvRow(sample):
     row = []
     for x in listValuesPretty(sample.getChromaCens()):
         row.append(x)
-    #for x in listValuesPretty(sample.getMelSpect()):
-        #row.append(x)
     for x in listValuesPretty(sample.getMfcc()):
         row.append(x)
     for x in listValuesPretty(sample.getRms()):
@@ -200,12 +203,14 @@ def constructCsvRow(sample):
     row.append(sample.name)
     return row
 
+# creates the header for the csv from the get label functions
+# returns list of strings
 def constructCsvHeader(sample):
     header = []
+    header.append("FileNum")
+    header.append("FileName")
     for x in sample.getChromaCensLabels():
         header.append(x)
-    #for x in sample.getMelSpectLabels():
-        #header.append(x)
     for x in sample.getMfccLabels():
         header.append(x)
     for x in sample.getRmsLabels():
@@ -225,27 +230,118 @@ def constructCsvHeader(sample):
     for x in sample.getZeroCrossLabels():
         header.append(x)
     header.append("SampleID")
-    header.append("FileNum")
     return header
 
-def writeAllToCsv(sampleFileFolderPath, sampleTypeID):
+
+# call this with the path to a folder containing audio recordings on your computer as sampleFileFolderPath
+# second parameter is a string sampleTypeID that designates whether the samples are testing, training, 0PR, 1PR, 2PR
+# sampleNumStart is the line/row index of the first file to process according to position in the folder, starting at 1
+# all listed files between sampleNumStart, sampleNumEnd inclusive will be processed and data output in order
+# sampleNumEnd is the last file to be processed according to position in the folder
+# to process all files in a folder: sampleNumStart=1, sampleNumEnd = num of files the folder contains (Properties)
+# creates a csv containing feature data
+def writeSpecificFilesToCsv(sampleFileFolderPath, sampleTypeID, sampleNumStart, sampleNumEnd):
     fileNameList = os.listdir(sampleFileFolderPath)
     outputFilename = "featureData" + sampleTypeID + ".csv"
     dataOutput = open(outputFilename, "w+", encoding="utf8")
-    writer = csv.writer(dataOutput, delimiter=',')
+    writer = csv.writer(dataOutput, delimiter=',', lineterminator="\r", quoting=csv.QUOTE_NONE)
     headerSampleName = fileNameList[0]
     headerSample = Sample((sampleFileFolderPath + "\\" + headerSampleName), sampleTypeID)
     writer.writerow(constructCsvHeader(headerSample))
     i = 1
     for sampleFile in fileNameList:
-        audioSample = Sample((sampleFileFolderPath + "\\" + sampleFile), sampleTypeID)
-        row = constructCsvRow(audioSample)
-        row.append(str(i))
-        print("Recording row number " + str(i))
-        writer.writerow(row)
-        i +=1
+        if i>= sampleNumStart and i<= sampleNumEnd:
+            samplePath = sampleFileFolderPath + "\\" + sampleFile
+            audioSample = Sample(samplePath, sampleTypeID)
+            row = []
+            row.append(str(i))
+            row.append(sampleFile)
+            featureList = constructCsvRow(audioSample)
+            for y in featureList:
+                row.append(y)
+            print("Recording row number " + str(i))
+            writer.writerow(row)
+        i += 1
 
 
-# call this with the path to the trial recordings folder as the path
-# "C:\\Users\\sydne\\Documents\\Recordings\\Replay-Recordings\\training\\2PR", "2PR"
-writeAllToCsv("C:\\Users\\sydne\\Documents\\Recordings\\trial recordings", "trial2")
+# call functions with the path to the Replay-Recordings recordings folder on your computer as sampleParentFolderPath
+# the second parameter numOfSamples is an integer number of samples to process in each of the 3 folders
+# total number of samples to process is 3 * numOfSamples
+# latest runtime was about 1 sample per second
+
+
+# creates a csv files one containing training data, the other containing testing data
+def writeTrainingDataToCsv(sampleParentFolderPath, numOfSamples):
+    startTime = time.time()
+    trainingFolders = sampleParentFolderPath + "\\training"
+    trainingFolderSet = [(trainingFolders + "\\0PR"), (trainingFolders + "\\1PR"), (trainingFolders + "\\2PR")]
+    trainingDataOutput = open("trainingData.csv", "w+", encoding="utf8")
+    c = 0
+    writer = csv.writer(trainingDataOutput, delimiter=',', lineterminator="\r", quoting=csv.QUOTE_NONE)
+    for x in trainingFolderSet:
+        sampleTypeID = "training" + str(c) + "PR"
+        fileNameList = os.listdir(x)
+        if c == 0:
+            headerSampleName = fileNameList[0]
+            headerSample = Sample((x + "\\" + headerSampleName), sampleTypeID)
+            writer.writerow(constructCsvHeader(headerSample))
+        i = 1
+        print(x)
+        for sampleFile in fileNameList:
+            if i <= numOfSamples:
+                samplePath = x + "\\" + sampleFile
+                audioSample = Sample(samplePath, sampleTypeID)
+                row = []
+                row.append(str(i))
+                row.append(sampleFile)
+                featureList = constructCsvRow(audioSample)
+                for y in featureList:
+                    row.append(y)
+                print("Recording sample number " + str(i) + " of " + str(numOfSamples) + " for " + str(c) + "PR training data set.")
+                writer.writerow(row)
+            i += 1
+        c += 1
+    runTime = time.time() - startTime
+    print("RUNTIME:" + str(runTime) + " seconds")
+    print("TOTAL SAMPLES PROCESSED: " + str(numOfSamples*3))
+
+
+# creates a csv files one containing training data, the other containing testing data
+def writeTestingDataToCsv(sampleParentFolderPath, numOfSamples):
+    startTime = time.time()
+    testingFolders = sampleParentFolderPath + "\\testing"
+    testingFolderSet = [(testingFolders + "\\0PR"), (testingFolders + "\\1PR"), (testingFolders + "\\2PR")]
+    testingDataOutput = open("testingData.csv", "w+", encoding="utf8")
+    c = 0
+    writer = csv.writer(testingDataOutput, delimiter=',', lineterminator="\r", quoting=csv.QUOTE_NONE)
+    for x in testingFolderSet:
+        sampleTypeID = "testing" + str(c) + "PR"
+        fileNameList = os.listdir(x)
+        if c == 0:
+            headerSampleName = fileNameList[0]
+            headerSample = Sample((x + "\\" + headerSampleName), sampleTypeID)
+            writer.writerow(constructCsvHeader(headerSample))
+        i = 1
+        print(x)
+        for sampleFile in fileNameList:
+            if i <= numOfSamples:
+                samplePath = x + "\\" + sampleFile
+                audioSample = Sample(samplePath, sampleTypeID)
+                row = []
+                row.append(str(i))
+                row.append(sampleFile)
+                featureList = constructCsvRow(audioSample)
+                for y in featureList:
+                    row.append(y)
+                print("Recording sample number " + str(i) + " of " + str(numOfSamples) + " for " + str(c) + "PR testing data set.")
+                writer.writerow(row)
+            i += 1
+        c += 1
+    runTime = time.time() - startTime
+    print("RUNTIME:" + str(runTime) + " seconds")
+    print("TOTAL SAMPLES PROCESSED: " + str(numOfSamples*3))
+
+
+
+writeTrainingDataToCsv("C:\\Users\\sydney\\Documents\\Recordings\\Replay-Recordings", 2)
+writeTestingDataToCsv("C:\\Users\\sydney\\Documents\\Recordings\\Replay-Recordings", 2)
